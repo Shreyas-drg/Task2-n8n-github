@@ -1,1 +1,319 @@
-
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "206d4a96-5095-437f-ace5-ea71a72c8171",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/search/repositories?q=artificial-intelligence&sort=stars&order=desc&per_page=5",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "7e7d9329-1bb8-4c52-91b1-3752c002ffaf",
+      "name": "HTTP Request",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const repos = $json.items;\n\nreturn repos.slice(0, 5).map(repo => ({\n  json: {\n    name: repo.name,\n    full_name: repo.full_name,\n    description: repo.description,\n    stars: repo.stargazers_count,\n    forks: repo.forks_count,\n    language: repo.language,\n    url: repo.html_url\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "efd18f20-a393-4ccd-8bd6-85a0a3a6087e",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        672,
+        0
+      ],
+      "id": "f1fe757e-a48f-419d-9d35-ed38b5fbac94",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/{{$json.full_name}}/readme",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        759,
+        0
+      ],
+      "id": "cf1ec0f0-b09c-45be-b631-bb6901d902e5",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const repo = $('Code in JavaScript').first().json;\nconst readme = $json;\n\nlet readmeText = '';\n\nif (readme.content) {\n  readmeText = Buffer\n    .from(readme.content, 'base64')\n    .toString('utf8');\n}\n\nreturn [{\n  json: {\n    repository: repo.name,\n    full_name: repo.full_name,\n    stars: repo.stars,\n    forks: repo.forks,\n    language: repo.language,\n    url: repo.url,\n    description: repo.description,\n    readme_preview: readmeText.substring(0, 500)\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        0
+      ],
+      "id": "d6067676-72be-4f5c-92c1-a49227dec0af",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2d1ca101-6922-4280-a366-04f190b6c9ff",
+              "leftValue": "={{ $json.stars }}",
+              "rightValue": 100000,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1216,
+        0
+      ],
+      "id": "631175b4-d419-40c6-b317-276cfb69fa0e",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "message",
+        "guildId": {
+          "__rl": true,
+          "value": "750961567218270318",
+          "mode": "list",
+          "cachedResultName": "shreyas's server",
+          "cachedResultUrl": "https://discord.com/channels/750961567218270318"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "750961567218270321",
+          "mode": "list",
+          "cachedResultName": "general",
+          "cachedResultUrl": "https://discord.com/channels/750961567218270318/750961567218270321"
+        },
+        "content": "=🚀 GitHub AI Repository Alert\n\nRepository: {{$json.repository}}\nStars: {{$json.stars}}\nForks: {{$json.forks}}\nLanguage: {{$json.language}}\n\nDescription:\n{{$json.description}}\n\nGitHub:\n{{$json.url}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        -96
+      ],
+      "id": "79623ded-c3db-4684-94ad-945558025bbf",
+      "name": "Send a message",
+      "webhookId": "6fa6f6d4-512d-4a85-bcee-a68af1e4f4b2",
+      "credentials": {
+        "discordOAuth2Api": {
+          "id": "fQGG3e6GT0oEU2Mv",
+          "name": "Discord account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => ({\n  json: {\n    alert: \"GitHub API request failed\",\n    error: item.json.error?.message || \"Unknown error\",\n    timestamp: new Date().toISOString()\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        144
+      ],
+      "id": "43cf5268-db1e-4eb7-a6a5-6bf56f217025",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "message",
+        "guildId": {
+          "__rl": true,
+          "value": "750961567218270318",
+          "mode": "list",
+          "cachedResultName": "shreyas's server",
+          "cachedResultUrl": "https://discord.com/channels/750961567218270318"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "750961567218270321",
+          "mode": "list",
+          "cachedResultName": "general",
+          "cachedResultUrl": "https://discord.com/channels/750961567218270318/750961567218270321"
+        },
+        "content": "=⚠️ Workflow Error\n\n{{$json.alert}}\n\nError:\n{{$json.error}}\n\nTime:\n{{$json.timestamp}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        720,
+        144
+      ],
+      "id": "b4f0f66e-6815-4d73-bf39-5994b8febee8",
+      "name": "Send a message1",
+      "webhookId": "6ecec651-dbde-4221-b770-428caa0790d7",
+      "credentials": {
+        "discordOAuth2Api": {
+          "id": "fQGG3e6GT0oEU2Mv",
+          "name": "Discord account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f0c379ad-7cff-42e0-8866-a4e16c96c146",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4f590d6c0866a0be54e97af8606d4b41e56edd77d89faf7b163b871a27bfe6b9"
+  },
+  "nodeGroups": [],
+  "id": "7d2634S9TxzU7FuC",
+  "tags": []
+}
